@@ -11,3 +11,4 @@ data/processed/
 
 # OS
 .DS_Store
+.vercel
