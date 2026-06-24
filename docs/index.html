@@ -21,6 +21,29 @@
       出没データは少数のため、これは統計的な相対リスクの目安であり、スコアが低い場所の安全を保証するものではありません。
     </p>
   </header>
+  <aside id="filters" aria-label="出没地点フィルタ">
+    <label>
+      季節
+      <select id="season-filter">
+        <option value="all">すべて</option>
+        <option value="spring">春</option>
+        <option value="summer">夏</option>
+        <option value="autumn">秋</option>
+        <option value="winter">冬</option>
+      </select>
+    </label>
+    <label>
+      月
+      <select id="month-filter">
+        <option value="all">すべて</option>
+      </select>
+    </label>
+    <label class="toggle">
+      <input id="food-season-filter" type="checkbox" />
+      秋の採食期のみ
+    </label>
+    <div id="filter-count">出没地点: -</div>
+  </aside>
   <div id="map"></div>
   <footer id="footer">
     出典: 国土数値情報（行政区域・河川・土地利用細分メッシュ）／国土地理院（標高タイル・地図タイル）を加工して作成。

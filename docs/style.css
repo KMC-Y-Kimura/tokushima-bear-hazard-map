@@ -7,6 +7,31 @@ body { display: flex; flex-direction: column; height: 100vh; }
 #header p { margin: 0; font-size: 0.78rem; line-height: 1.5; color: #d8e0d8; }
 #header strong { color: #ffd27f; }
 
+#filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  background: #f7f5ef;
+  border-bottom: 1px solid #ddd7c8;
+  color: #2f332d;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+}
+#filters label { display: inline-flex; align-items: center; gap: 6px; }
+#filters select {
+  min-width: 78px;
+  border: 1px solid #b8b0a2;
+  border-radius: 4px;
+  background: #fff;
+  color: #222;
+  padding: 3px 8px;
+  font: inherit;
+}
+#filters .toggle { gap: 5px; }
+#filters input { margin: 0; }
+#filter-count { margin-left: auto; color: #555; white-space: nowrap; }
+
 #map { flex: 1 1 auto; }
 
 #footer { background: #f0f0ee; color: #555; padding: 6px 16px; font-size: 0.7rem; line-height: 1.4; }
@@ -24,3 +49,12 @@ body { display: flex; flex-direction: column; height: 100vh; }
 .popup-date { font-weight: bold; color: #b5460f; }
 .popup-place { font-size: 0.9rem; margin: 2px 0; }
 .popup-ev { display: inline-block; padding: 1px 6px; border-radius: 8px; color: #fff; font-size: 0.72rem; }
+.popup-meta { margin-top: 5px; color: #444; font-size: 0.76rem; line-height: 1.45; }
+
+@media (max-width: 640px) {
+  #header { padding: 8px 12px; }
+  #header p { font-size: 0.72rem; }
+  #filters { padding: 7px 12px; gap: 7px 10px; }
+  #filter-count { flex-basis: 100%; margin-left: 0; }
+  #footer { padding: 5px 12px; }
+}
