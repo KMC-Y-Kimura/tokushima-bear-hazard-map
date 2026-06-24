@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 import config as C
+import weather_features
 
 FEATURES = ["elev", "slope", "relief", "forest", "building", "agri", "dist_river"]
 BANDWIDTH = 1.0  # Gaussian カーネルのバンド幅
@@ -74,6 +75,7 @@ def main() -> int:
     print("[score]")
     grid = gpd.read_file(C.PROCESSED / "grid_features.geojson")
     sightings = pd.read_csv(C.SIGHTINGS_CSV)
+    sightings = weather_features.enrich_sightings(sightings)
 
     Z, _, _ = _feature_matrix(grid)
     cov_inv = _cov_inv(Z)

@@ -11,6 +11,7 @@ PROCESSED = DATA / "processed"
 DOCS = ROOT / "docs"
 DOCS_DATA = DOCS / "data"
 SIGHTINGS_CSV = DATA / "sightings.csv"
+WEATHER_DAILY_CSV = DATA / "weather_daily.csv"
 
 # --- 対象範囲（徳島県） ---
 PREF_CODE = "36"

@@ -23,6 +23,11 @@
 | agri | 農地率 | 同上 |
 | dist_river | 最近隣河川までの距離 | 国土数値情報 河川データ W05 |
 
+出没地点には日付から `year` / `month` / `season` / `activity_period` /
+`is_food_season` / `is_denning_season` / `moon_phase` を付与します。
+任意で `data/weather_daily.csv` を置くと、同日の気象データも出没地点に結合され、
+Webマップのポップアップに表示されます。
+
 グリッド: 標準地域メッシュ3次（≒1km）／対象: 徳島県（都道府県コード36）。
 県境ポリゴンは国土数値情報 行政区域 N03 を使用。
 
@@ -32,6 +37,7 @@
 ├── requirements/requirements.md   要件定義書
 ├── data/
 │   ├── sightings.csv              出没記録（手動ジオコーディング済み）
+│   ├── weather_daily.csv          任意: 日別気象データ（手動配置）
 │   ├── raw/                       KSJ/DEM 生データ（.gitignore, 自動取得）
 │   └── processed/                 中間・成果物 GeoJSON
 ├── src/
@@ -40,6 +46,7 @@
 │   ├── gsi_dem.py                標高タイル取得・標高/傾斜算出
 │   ├── build_features.py         3次メッシュ生成・特徴量集計
 │   ├── score.py                  類似度ハザードスコア算出
+│   ├── export_sightings.py       出没点GeoJSONのみ再生成
 │   └── pipeline.py               一括実行
 └── docs/                          Web マップ（GitHub Pages 配信対象）
     ├── index.html / app.js / style.css
@@ -56,6 +63,9 @@ pip install -r requirements.txt
 python src/pipeline.py
 # データ取得済みなら（再計算のみ）
 python src/pipeline.py --no-download
+
+# 出没点の季節・天気属性だけを更新する場合
+python src/export_sightings.py
 ```
 
 ### Web マップをローカルで確認
@@ -72,6 +82,17 @@ python -m http.server 8000 --directory docs
    （pᵢ: 出没メッシュ、d_M: マハラノビス距離、h: バンド幅）
 5. 0–1 に正規化して GeoJSON へ
 - 妥当性確認: leave-one-out による出没メッシュの平均パーセンタイル（実行時にログ出力）
+
+## 天気・季節データの追加
+`data/weather_daily.csv` は以下の列に対応しています。`date` は必須で、それ以外は任意です。
+
+```csv
+date,station,station_lat,station_lon,weather,temp_avg,temp_max,temp_min,precipitation,snowfall,sunshine,wind_speed
+2025-07-13,木頭,33.82,134.20,晴,25.3,30.1,21.2,0.0,0.0,8.4,1.8
+```
+
+`station_lat` と `station_lon` がある場合は、同じ日付の観測値から出没地点に最も近い観測所を採用します。
+ない場合は `date` だけで結合します。気象値はハザードスコアにはまだ入れず、まず出没点の説明情報として重ねています。
 
 ## データの手動ダウンロード（自動取得が失敗した場合）
 国土数値情報ダウンロードサイト <https://nlftp.mlit.go.jp/ksj/> から徳島県(36)の
