@@ -30,6 +30,17 @@ const HAZARD_STOPS = [
   [0.75, [243, 127, 77]],
   [1.0, [150, 0, 28]],
 ];
+const WEB_MERCATOR_MAX_LAT = 85.05112878;
+
+function mercatorX(lon) {
+  return (lon + 180) / 360;
+}
+
+function mercatorY(lat) {
+  const clamped = Math.max(-WEB_MERCATOR_MAX_LAT, Math.min(WEB_MERCATOR_MAX_LAT, lat));
+  const radians = (clamped * Math.PI) / 180;
+  return (1 - Math.log(Math.tan(Math.PI / 4 + radians / 2)) / Math.PI) / 2;
+}
 
 function hazardRgb(s) {
   const score = Math.pow(Math.max(0, Math.min(1, s)), HAZARD_DISPLAY_GAMMA);
@@ -230,6 +241,10 @@ function buildHazardSurface(grid) {
 
   const centerLons = lonKeys.map(Number);
   const centerLats = latKeys.map(Number);
+  const centerMercYsNorth = centerLats
+    .slice()
+    .reverse()
+    .map((lat) => mercatorY(lat));
   const xIndex = new Map(lonKeys.map((key, index) => [key, index]));
   const yIndex = new Map(latKeys.map((key, index) => [key, index]));
   const scores = Array.from({ length: centerLats.length }, () => Array(centerLons.length).fill(null));
@@ -251,6 +266,13 @@ function buildHazardSurface(grid) {
     northMax: Math.max(...cells.map((cell) => cell.north)),
     cellWidth: cells[0].east - cells[0].west,
     cellHeight: cells[0].north - cells[0].south,
+    mercWestMin: mercatorX(Math.min(...cells.map((cell) => cell.west))),
+    mercEastMax: mercatorX(Math.max(...cells.map((cell) => cell.east))),
+    mercSouthMin: mercatorY(Math.min(...cells.map((cell) => cell.south))),
+    mercNorthMax: mercatorY(Math.max(...cells.map((cell) => cell.north))),
+    centerMercX0: mercatorX(centerLons[0]),
+    centerMercYsNorth,
+    cellMercWidth: mercatorX(cells[0].east) - mercatorX(cells[0].west),
     centerLons,
     centerLats,
     scores,
@@ -290,23 +312,45 @@ function boundaryPolygons(boundaryData) {
 }
 
 function traceBoundaryPath(ctx, polygons, surface, width, height) {
-  const lonSpan = surface.eastMax - surface.westMin;
-  const latSpan = surface.northMax - surface.southMin;
-  if (!lonSpan || !latSpan) return;
+  const mercWidth = surface.mercEastMax - surface.mercWestMin;
+  const mercHeight = surface.mercSouthMin - surface.mercNorthMax;
+  if (!mercWidth || !mercHeight) return;
 
   ctx.beginPath();
   for (const polygon of polygons) {
     for (const ring of polygon) {
       if (!ring.length) continue;
       ring.forEach(([lon, lat], index) => {
-        const x = ((lon - surface.westMin) / lonSpan) * width;
-        const y = ((surface.northMax - lat) / latSpan) * height;
+        const x = ((mercatorX(lon) - surface.mercWestMin) / mercWidth) * width;
+        const y = ((mercatorY(lat) - surface.mercNorthMax) / mercHeight) * height;
         if (index === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
       ctx.closePath();
     }
   }
+}
+
+function mercatorYToGridY(surface, mercY) {
+  const ys = surface.centerMercYsNorth;
+  const last = ys.length - 1;
+  if (last <= 0) return 0;
+  if (mercY <= ys[0]) return last;
+  if (mercY >= ys[last]) return 0;
+
+  let lo = 0;
+  let hi = last;
+  while (lo + 1 < hi) {
+    const mid = (lo + hi) >> 1;
+    if (ys[mid] <= mercY) lo = mid;
+    else hi = mid;
+  }
+
+  const start = ys[lo];
+  const end = ys[lo + 1];
+  const t = end === start ? 0 : (mercY - start) / (end - start);
+  const northRow = lo + t;
+  return last - northRow;
 }
 
 function hazardRasterScale(surface) {
@@ -352,7 +396,10 @@ function sampleHazardSurface(surface, gx, gy) {
 function renderHazardOverlay(surface, boundaryData) {
   const scale = hazardRasterScale(surface);
   const width = surface.cols * scale;
-  const height = surface.rows * scale;
+  const mercWidth = surface.mercEastMax - surface.mercWestMin;
+  const mercHeight = surface.mercSouthMin - surface.mercNorthMax;
+  const pixelsPerMercatorUnit = width / mercWidth;
+  const height = Math.max(1, Math.round(mercHeight * pixelsPerMercatorUnit));
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -360,11 +407,22 @@ function renderHazardOverlay(surface, boundaryData) {
   const ctx = canvas.getContext("2d");
   const image = ctx.createImageData(width, height);
   const pixels = image.data;
+  const gxByPx = new Float32Array(width);
+  const gyByPy = new Float32Array(height);
+
+  for (let px = 0; px < width; px++) {
+    const mercX = surface.mercWestMin + (px + 0.5) / pixelsPerMercatorUnit;
+    gxByPx[px] = (mercX - surface.centerMercX0) / surface.cellMercWidth;
+  }
+  for (let py = 0; py < height; py++) {
+    const mercY = surface.mercNorthMax + (py + 0.5) / pixelsPerMercatorUnit;
+    gyByPy[py] = mercatorYToGridY(surface, mercY);
+  }
 
   for (let py = 0; py < height; py++) {
-    const gy = surface.rows - (py + 0.5) / scale - 0.5;
+    const gy = gyByPy[py];
     for (let px = 0; px < width; px++) {
-      const gx = (px + 0.5) / scale - 0.5;
+      const gx = gxByPx[px];
       const score = sampleHazardSurface(surface, gx, gy);
       if (score === null) continue;
 
