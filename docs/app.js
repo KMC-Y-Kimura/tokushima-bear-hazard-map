@@ -1,8 +1,8 @@
-// 徳島県 クマ出没ハザードマップ
+// 四国本島 クマ出没ハザードマップ
 "use strict";
 
 // 国土地理院 淡色地図
-const map = L.map("map", { preferCanvas: true }).setView([33.87, 134.15], 10);
+const map = L.map("map", { preferCanvas: true }).setView([33.72, 133.6], 8);
 L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png", {
   attribution:
     "地図: <a href='https://maps.gsi.go.jp/development/ichiran.html'>国土地理院</a>",
@@ -508,7 +508,14 @@ Promise.all([
   hazardLayer.addTo(map);
   renderSightings();
   sightingLayer.addTo(map);
-  map.fitBounds(sightingLayer.getBounds().pad(0.4));
+  const boundaryBounds = L.geoJSON(boundary).getBounds();
+  if (boundaryBounds.isValid()) {
+    map.fitBounds(boundaryBounds.pad(0.03));
+  } else if (hazardHitLayer.getBounds().isValid()) {
+    map.fitBounds(hazardHitLayer.getBounds().pad(0.03));
+  } else if (sightingLayer.getBounds().isValid()) {
+    map.fitBounds(sightingLayer.getBounds().pad(0.2));
+  }
 });
 
 // --- レイヤ切替 ---
